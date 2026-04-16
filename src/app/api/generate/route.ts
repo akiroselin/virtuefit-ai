@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getJob, setJob } from '@/lib/jobStore';
-import { textTo3D, getTaskStatus } from '@/lib/meshyApi';
+import { textTo3D, getTaskStatus } from '@/lib/tripoApi';
 
-const USE_MESHY = process.env.USE_MESHY === 'true';
-const MESHY_API_KEY = process.env.MESHY_API_KEY;
+const USE_TRIPO = process.env.USE_TRIPO === 'true';
+const TRIPO_API_KEY = process.env.TRIPO_API_KEY;
 const COMFYUI_API_URL = process.env.COMFYUI_API_URL;
 const COMFYUI_API_KEY = process.env.COMFYUI_API_KEY;
 
@@ -27,9 +27,9 @@ export async function POST(request: NextRequest) {
     });
 
     // 选择生成模式
-    if (USE_MESHY && MESHY_API_KEY) {
-      // Meshy.ai 模式 - 生成 3D 模型
-      processMeshyGeneration(jobId, { prompt, style });
+    if (USE_TRIPO && TRIPO_API_KEY) {
+      // Tripo3D 模式 - 生成 3D 模型
+      processTripoGeneration(jobId, { prompt, style });
     } else if (COMFYUI_API_URL) {
       // ComfyUI 模式
       processComfyUIGeneration(jobId, { prompt, style, colors });
@@ -52,30 +52,30 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Meshy.ai 3D 模型生成
-async function processMeshyGeneration(
+// Tripo3D 3D 模型生成
+async function processTripoGeneration(
   jobId: string,
   params: { prompt: string; style?: string }
 ) {
   try {
     setJob(jobId, { status: 'processing', createdAt: new Date() });
 
-    // 开始 Meshy 任务
+    // 开始 Tripo 任务
     const result = await textTo3D({
       prompt: params.prompt,
-      style: (params.style as any) || 'realistics',
-      negativePrompt: 'low quality, blurry, distorted, bad anatomy',
+      texture: true,
+      template: 'realistic',
     });
 
     if (!result.success || !result.taskId) {
-      throw new Error(result.error || 'Meshy generation failed');
+      throw new Error(result.error || 'Tripo3D generation failed');
     }
 
-    // 轮询 Meshy 任务
-    await pollMeshyJob(jobId, result.taskId);
+    // 轮询 Tripo 任务
+    await pollTripoJob(jobId, result.taskId);
 
   } catch (error) {
-    console.error('Meshy generation failed:', error);
+    console.error('Tripo3D generation failed:', error);
     setJob(jobId, {
       status: 'failed',
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -84,8 +84,8 @@ async function processMeshyGeneration(
   }
 }
 
-// 轮询 Meshy 任务
-async function pollMeshyJob(jobId: string, taskId: string) {
+// 轮询 Tripo 任务
+async function pollTripoJob(jobId: string, taskId: string) {
   const maxAttempts = 60; // 60 * 10s = 10分钟超时
   let attempts = 0;
 
@@ -93,18 +93,18 @@ async function pollMeshyJob(jobId: string, taskId: string) {
     try {
       const status = await getTaskStatus(taskId);
 
-      if (status.status === 'COMPLETED') {
+      if (status.status === 'success') {
         setJob(jobId, {
           status: 'completed',
-          images: status.previewImageUrls || [],
+          images: status.thumbnailUrl ? [status.thumbnailUrl] : [],
           modelUrl: status.modelUrl,
           createdAt: new Date(),
         });
         return;
       }
 
-      if (status.status === 'FAILED') {
-        throw new Error(status.error || 'Meshy task failed');
+      if (status.status === 'failed') {
+        throw new Error(status.error || 'Tripo3D task failed');
       }
 
       // 每10秒轮询一次
