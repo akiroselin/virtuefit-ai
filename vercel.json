@@ -3,10 +3,6 @@
   "outputDirectory": ".next",
   "framework": "nextjs",
   "regions": ["iad1"],
-  "env": {
-    "COMFYUI_API_URL": "@comfyui-api-url",
-    "COMFYUI_API_KEY": "@comfyui-api-key"
-  },
   "headers": [
     {
       "source": "/api/(.*)",
