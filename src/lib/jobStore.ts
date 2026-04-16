@@ -4,6 +4,7 @@
 export interface GenerationJob {
   status: 'queued' | 'processing' | 'completed' | 'failed';
   images?: string[];
+  modelUrl?: string;
   error?: string;
   createdAt: Date;
 }
