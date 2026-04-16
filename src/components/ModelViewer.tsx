@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useState, useEffect, Suspense } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { useRef, useState, useEffect, Suspense, Component, ReactNode } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { 
   Environment, 
   ContactShadows, 
@@ -10,7 +10,7 @@ import {
   useProgress,
   Html
 } from '@react-three/drei';
-import { useGLTF, MeshTransmissionMaterial, Float } from '@react-three/drei';
+import { Float } from '@react-three/drei';
 import * as THREE from 'three';
 
 interface ModelViewerProps {
@@ -21,6 +21,41 @@ interface ModelViewerProps {
     style: string;
     createdAt: Date;
   };
+}
+
+interface ModelViewerState {
+  hasError: boolean;
+  error?: string;
+}
+
+// Error Boundary Component
+class ModelViewerErrorBoundary extends Component<{ children: ReactNode }, ModelViewerState> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error: error.message };
+  }
+
+  componentDidCatch(error: Error, errorInfo: any) {
+    console.error('ModelViewer Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-dark-purple rounded-xl">
+          <div className="text-4xl mb-4">⚠️</div>
+          <p className="text-text-secondary text-center px-4">
+            3D Viewer failed to load. Please refresh the page.
+          </p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 function Loader() {
@@ -35,20 +70,18 @@ function Loader() {
   );
 }
 
-function VirtualModel({ outfitImage }: { outfitImage?: string }) {
+function VirtualModel() {
   const meshRef = useRef<THREE.Group>(null);
-  const [hovered, setHovered] = useState(false);
 
   useFrame((state) => {
     if (meshRef.current) {
-      meshRef.current.rotation.y += 0.005;
+      meshRef.current.rotation.y += 0.003;
       meshRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
     }
   });
 
-  // Create a stylized mannequin form
   return (
-    <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+    <Float speed={2} rotationIntensity={0.3} floatIntensity={0.3}>
       <group ref={meshRef}>
         {/* Head */}
         <mesh position={[0, 2.8, 0]} castShadow>
@@ -65,27 +98,13 @@ function VirtualModel({ outfitImage }: { outfitImage?: string }) {
         {/* Torso */}
         <mesh position={[0, 1.7, 0]} castShadow>
           <capsuleGeometry args={[0.3, 0.8, 8, 16]} />
-          <meshTransmissionMaterial 
-            color={outfitImage ? '#ffffff' : '#1a1a2e'} 
-            roughness={0.2}
-            transmission={outfitImage ? 0 : 0.1}
-            thickness={0.5}
-            emissive={outfitImage ? '#667eea' : '#000000'}
-            emissiveIntensity={outfitImage ? 0.1 : 0}
-          />
+          <meshStandardMaterial color="#1a1a2e" roughness={0.3} metalness={0.2} />
         </mesh>
 
         {/* Hips */}
         <mesh position={[0, 0.9, 0]} castShadow>
           <capsuleGeometry args={[0.35, 0.4, 8, 16]} />
-          <meshTransmissionMaterial 
-            color={outfitImage ? '#ffffff' : '#1a1a2e'} 
-            roughness={0.2}
-            transmission={outfitImage ? 0 : 0.1}
-            thickness={0.5}
-            emissive={outfitImage ? '#764ba2' : '#000000'}
-            emissiveIntensity={outfitImage ? 0.1 : 0}
-          />
+          <meshStandardMaterial color="#1a1a2e" roughness={0.3} metalness={0.2} />
         </mesh>
 
         {/* Left Arm */}
@@ -111,31 +130,26 @@ function VirtualModel({ outfitImage }: { outfitImage?: string }) {
           <capsuleGeometry args={[0.1, 0.8, 8, 16]} />
           <meshStandardMaterial color="#f0d0c0" roughness={0.6} />
         </mesh>
-
-        {/* Outfit overlay if generated */}
-        {outfitImage && (
-          <mesh position={[0, 1.5, 0.1]} scale={[0.8, 1.2, 0.5]}>
-            <planeGeometry args={[1, 1.5]} />
-            <meshBasicMaterial transparent opacity={0.9}>
-              <canvasTexture attach="map" image={undefined} />
-            </meshBasicMaterial>
-          </mesh>
-        )}
       </group>
     </Float>
   );
 }
 
-function Scene({ outfit }: { outfit?: ModelViewerProps['currentOutfit'] }) {
+function Scene() {
   const [webgpuSupported, setWebgpuSupported] = useState(false);
 
   useEffect(() => {
-    // Check WebGPU support
-    const checkWebGPU = async () => {
+    const checkWebGPU = () => {
       try {
         // @ts-expect-error WebGPU API not in TypeScript lib
-        const adapter = await navigator.gpu?.requestAdapter();
-        setWebgpuSupported(!!adapter);
+        if (navigator.gpu) {
+          // @ts-expect-error WebGPU API not in TypeScript lib
+          navigator.gpu.requestAdapter().then((adapter: any) => {
+            setWebgpuSupported(!!adapter);
+          }).catch(() => {
+            setWebgpuSupported(false);
+          });
+        }
       } catch {
         setWebgpuSupported(false);
       }
@@ -152,7 +166,7 @@ function Scene({ outfit }: { outfit?: ModelViewerProps['currentOutfit'] }) {
         enableZoom={true}
         minPolarAngle={Math.PI / 4}
         maxPolarAngle={Math.PI / 1.5}
-        autoRotate={!webgpuSupported}
+        autoRotate={true}
         autoRotateSpeed={0.5}
       />
 
@@ -162,7 +176,7 @@ function Scene({ outfit }: { outfit?: ModelViewerProps['currentOutfit'] }) {
         position={[5, 5, 5]}
         intensity={1}
         castShadow
-        shadow-mapSize={[1024, 1024]}
+        shadow-mapSize={[512, 512]}
       />
       <pointLight position={[-5, 3, -5]} intensity={0.5} color="#667eea" />
       <pointLight position={[5, 3, -5]} intensity={0.5} color="#764ba2" />
@@ -172,7 +186,7 @@ function Scene({ outfit }: { outfit?: ModelViewerProps['currentOutfit'] }) {
 
       {/* Model */}
       <Suspense fallback={<Loader />}>
-        <VirtualModel outfitImage={outfit?.images?.[0]} />
+        <VirtualModel />
       </Suspense>
 
       {/* Floor shadow */}
@@ -199,38 +213,47 @@ export default function ModelViewer({ currentOutfit }: ModelViewerProps) {
 
   if (!mounted) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-dark-purple">
-        <p className="text-text-secondary">Initializing 3D Engine...</p>
+      <div className="w-full h-full flex items-center justify-center bg-dark-purple rounded-xl">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full border-4 border-purple-500/30 border-t-purple-500 animate-spin" />
+          <p className="text-text-secondary">Initializing 3D Engine...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full relative">
-      <Canvas
-        shadows
-        dpr={[1, 2]}
-        gl={{
-          antialias: true,
-          alpha: true,
-          powerPreference: 'high-performance',
-        }}
-        style={{ background: 'linear-gradient(180deg, #0a0a0f 0%, #14141f 100%)' }}
-      >
-        <Scene outfit={currentOutfit} />
-      </Canvas>
+    <ModelViewerErrorBoundary>
+      <div className="w-full h-full relative">
+        <Canvas
+          shadows
+          dpr={[1, 1.5]}
+          gl={{
+            antialias: true,
+            alpha: true,
+            powerPreference: 'default',
+            failIfMajorPerformanceCaveat: false,
+          }}
+          style={{ background: 'linear-gradient(180deg, #0a0a0f 0%, #14141f 100%)' }}
+          onCreated={({ gl }) => {
+            gl.setClearColor('#0a0a0f');
+          }}
+        >
+          <Scene />
+        </Canvas>
 
-      {/* WebGPU Badge */}
-      <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 rounded-full glass-effect text-xs">
-        <span className="w-2 h-2 rounded-full bg-green-500" />
-        <span className="text-text-secondary">WebGPU</span>
-      </div>
+        {/* WebGPU Badge */}
+        <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 rounded-full glass-effect text-xs">
+          <span className="w-2 h-2 rounded-full bg-green-500" />
+          <span className="text-text-secondary">3D Ready</span>
+        </div>
 
-      {/* Instructions */}
-      <div className="absolute bottom-20 left-4 text-xs text-text-secondary">
-        <p>🖱️ Drag to rotate</p>
-        <p>⚲ Scroll to zoom</p>
+        {/* Instructions */}
+        <div className="absolute bottom-20 left-4 text-xs text-text-secondary">
+          <p>🖱️ Drag to rotate</p>
+          <p>⚲ Scroll to zoom</p>
+        </div>
       </div>
-    </div>
+    </ModelViewerErrorBoundary>
   );
 }
