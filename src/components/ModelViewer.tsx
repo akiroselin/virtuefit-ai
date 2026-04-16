@@ -28,7 +28,6 @@ interface ModelViewerState {
   error?: string;
 }
 
-// Error Boundary Component
 class ModelViewerErrorBoundary extends Component<{ children: ReactNode }, ModelViewerState> {
   constructor(props: any) {
     super(props);
@@ -70,9 +69,9 @@ function Loader() {
   );
 }
 
-function VirtualModel() {
+function AsianFemaleModel() {
   const meshRef = useRef<THREE.Group>(null);
-
+  
   useFrame((state) => {
     if (meshRef.current) {
       meshRef.current.rotation.y += 0.003;
@@ -80,86 +79,175 @@ function VirtualModel() {
     }
   });
 
+  // Skin tone for Asian female
+  const skinColor = '#f5d0b5';
+  const hairColor = '#1a1a1a';
+  const outfitColor = '#2a2a4a';
+  const dressColor = '#667eea';
+
   return (
-    <Float speed={2} rotationIntensity={0.3} floatIntensity={0.3}>
+    <Float speed={2} rotationIntensity={0.2} floatIntensity={0.3}>
       <group ref={meshRef}>
-        {/* Head */}
-        <mesh position={[0, 2.8, 0]} castShadow>
-          <sphereGeometry args={[0.25, 32, 32]} />
-          <meshStandardMaterial color="#f0d0c0" roughness={0.6} />
+
+        {/* Hair - Long black hair */}
+        <mesh position={[0, 2.95, -0.05]} castShadow>
+          <sphereGeometry args={[0.27, 32, 32]} />
+          <meshStandardMaterial color={hairColor} roughness={0.8} />
+        </mesh>
+        
+        {/* Hair back - longer */}
+        <mesh position={[0, 2.4, -0.12]} castShadow>
+          <capsuleGeometry args={[0.24, 0.5, 8, 16]} />
+          <meshStandardMaterial color={hairColor} roughness={0.8} />
+        </mesh>
+        
+        {/* Side hair left */}
+        <mesh position={[-0.25, 2.2, -0.05]} rotation={[0.1, 0, 0.2]} castShadow>
+          <capsuleGeometry args={[0.06, 0.6, 8, 16]} />
+          <meshStandardMaterial color={hairColor} roughness={0.8} />
+        </mesh>
+        
+        {/* Side hair right */}
+        <mesh position={[0.25, 2.2, -0.05]} rotation={[0.1, 0, -0.2]} castShadow>
+          <capsuleGeometry args={[0.06, 0.6, 8, 16]} />
+          <meshStandardMaterial color={hairColor} roughness={0.8} />
         </mesh>
 
-        {/* Neck */}
+        {/* Head - smaller, more delicate for female */}
+        <mesh position={[0, 2.75, 0]} castShadow>
+          <sphereGeometry args={[0.22, 32, 32]} />
+          <meshStandardMaterial color={skinColor} roughness={0.6} />
+        </mesh>
+
+        {/* Face - subtle features */}
+        <mesh position={[0, 2.72, 0.18]} castShadow>
+          <sphereGeometry args={[0.18, 32, 32]} />
+          <meshStandardMaterial color={skinColor} roughness={0.6} />
+        </mesh>
+
+        {/* Eyes - left */}
+        <mesh position={[-0.07, 2.78, 0.2]} castShadow>
+          <sphereGeometry args={[0.025, 16, 16]} />
+          <meshStandardMaterial color='#2a1810' roughness={0.3} />
+        </mesh>
+        
+        {/* Eyes - right */}
+        <mesh position={[0.07, 2.78, 0.2]} castShadow>
+          <sphereGeometry args={[0.025, 16, 16]} />
+          <meshStandardMaterial color='#2a1810' roughness={0.3} />
+        </mesh>
+
+        {/* Nose - smaller, more delicate */}
+        <mesh position={[0, 2.72, 0.22]} castShadow>
+          <sphereGeometry args={[0.025, 16, 16]} />
+          <meshStandardMaterial color={skinColor} roughness={0.7} />
+        </mesh>
+
+        {/* Lips - subtle pink */}
+        <mesh position={[0, 2.67, 0.22]} castShadow>
+          <sphereGeometry args={[0.04, 16, 16]} />
+          <meshStandardMaterial color='#e8a0a0' roughness={0.4} />
+        </mesh>
+
+        {/* Neck - slender */}
         <mesh position={[0, 2.4, 0]} castShadow>
-          <cylinderGeometry args={[0.08, 0.1, 0.2, 16]} />
-          <meshStandardMaterial color="#f0d0c0" roughness={0.6} />
+          <cylinderGeometry args={[0.06, 0.08, 0.2, 16]} />
+          <meshStandardMaterial color={skinColor} roughness={0.6} />
         </mesh>
 
-        {/* Torso */}
+        {/* Shoulders - narrower for female */}
+        <mesh position={[0, 2.15, 0]} castShadow>
+          <capsuleGeometry args={[0.25, 0.15, 8, 16]} />
+          <meshStandardMaterial color={dressColor} roughness={0.4} metalness={0.1} />
+        </mesh>
+
+        {/* Upper body / Dress top */}
         <mesh position={[0, 1.7, 0]} castShadow>
-          <capsuleGeometry args={[0.3, 0.8, 8, 16]} />
-          <meshStandardMaterial color="#1a1a2e" roughness={0.3} metalness={0.2} />
+          <capsuleGeometry args={[0.22, 0.5, 8, 16]} />
+          <meshStandardMaterial color={dressColor} roughness={0.4} metalness={0.1} />
         </mesh>
 
-        {/* Hips */}
-        <mesh position={[0, 0.9, 0]} castShadow>
-          <capsuleGeometry args={[0.35, 0.4, 8, 16]} />
-          <meshStandardMaterial color="#1a1a2e" roughness={0.3} metalness={0.2} />
+        {/* Waist - cinched for female figure */}
+        <mesh position={[0, 1.2, 0]} castShadow>
+          <capsuleGeometry args={[0.18, 0.25, 8, 16]} />
+          <meshStandardMaterial color={dressColor} roughness={0.4} metalness={0.1} />
         </mesh>
 
-        {/* Left Arm */}
-        <mesh position={[-0.45, 1.6, 0]} rotation={[0, 0, 0.3]} castShadow>
+        {/* Hips / Lower dress - A-line skirt */}
+        <mesh position={[0, 0.85, 0]} castShadow>
+          <cylinderGeometry args={[0.25, 0.4, 0.7, 16]} />
+          <meshStandardMaterial color={dressColor} roughness={0.4} metalness={0.1} />
+        </mesh>
+
+        {/* Skirt hem */}
+        <mesh position={[0, 0.45, 0]} castShadow>
+          <cylinderGeometry args={[0.4, 0.42, 0.1, 16]} />
+          <meshStandardMaterial color={dressColor} roughness={0.4} metalness={0.1} />
+        </mesh>
+
+        {/* Left arm - slender */}
+        <mesh position={[-0.35, 1.75, 0]} rotation={[0, 0, 0.4]} castShadow>
+          <capsuleGeometry args={[0.05, 0.5, 8, 16]} />
+          <meshStandardMaterial color={skinColor} roughness={0.6} />
+        </mesh>
+        
+        {/* Left hand */}
+        <mesh position={[-0.42, 1.35, 0]} castShadow>
+          <sphereGeometry args={[0.04, 16, 16]} />
+          <meshStandardMaterial color={skinColor} roughness={0.6} />
+        </mesh>
+
+        {/* Right arm - slender */}
+        <mesh position={[0.35, 1.75, 0]} rotation={[0, 0, -0.4]} castShadow>
+          <capsuleGeometry args={[0.05, 0.5, 8, 16]} />
+          <meshStandardMaterial color={skinColor} roughness={0.6} />
+        </mesh>
+        
+        {/* Right hand */}
+        <mesh position={[0.42, 1.35, 0]} castShadow>
+          <sphereGeometry args={[0.04, 16, 16]} />
+          <meshStandardMaterial color={skinColor} roughness={0.6} />
+        </mesh>
+
+        {/* Left leg - slender */}
+        <mesh position={[-0.1, 0.15, 0]} castShadow>
           <capsuleGeometry args={[0.07, 0.7, 8, 16]} />
-          <meshStandardMaterial color="#f0d0c0" roughness={0.6} />
+          <meshStandardMaterial color={skinColor} roughness={0.6} />
         </mesh>
 
-        {/* Right Arm */}
-        <mesh position={[0.45, 1.6, 0]} rotation={[0, 0, -0.3]} castShadow>
+        {/* Left foot / heel */}
+        <mesh position={[-0.1, -0.45, 0.05]} castShadow>
+          <boxGeometry args={[0.08, 0.15, 0.2]} />
+          <meshStandardMaterial color='#1a1a2e' roughness={0.3} />
+        </mesh>
+
+        {/* Right leg - slender */}
+        <mesh position={[0.1, 0.15, 0]} castShadow>
           <capsuleGeometry args={[0.07, 0.7, 8, 16]} />
-          <meshStandardMaterial color="#f0d0c0" roughness={0.6} />
+          <meshStandardMaterial color={skinColor} roughness={0.6} />
         </mesh>
 
-        {/* Left Leg */}
-        <mesh position={[-0.15, 0.2, 0]} castShadow>
-          <capsuleGeometry args={[0.1, 0.8, 8, 16]} />
-          <meshStandardMaterial color="#f0d0c0" roughness={0.6} />
+        {/* Right foot / heel */}
+        <mesh position={[0.1, -0.45, 0.05]} castShadow>
+          <boxGeometry args={[0.08, 0.15, 0.2]} />
+          <meshStandardMaterial color='#1a1a2e' roughness={0.3} />
         </mesh>
 
-        {/* Right Leg */}
-        <mesh position={[0.15, 0.2, 0]} castShadow>
-          <capsuleGeometry args={[0.1, 0.8, 8, 16]} />
-          <meshStandardMaterial color="#f0d0c0" roughness={0.6} />
+        {/* Hair bangs */}
+        <mesh position={[0, 2.85, 0.15]} rotation={[0.3, 0, 0]} castShadow>
+          <boxGeometry args={[0.35, 0.08, 0.05]} />
+          <meshStandardMaterial color={hairColor} roughness={0.8} />
         </mesh>
+
       </group>
     </Float>
   );
 }
 
 function Scene() {
-  const [webgpuSupported, setWebgpuSupported] = useState(false);
-
-  useEffect(() => {
-    const checkWebGPU = () => {
-      try {
-        // @ts-expect-error WebGPU API not in TypeScript lib
-        if (navigator.gpu) {
-          // @ts-expect-error WebGPU API not in TypeScript lib
-          navigator.gpu.requestAdapter().then((adapter: any) => {
-            setWebgpuSupported(!!adapter);
-          }).catch(() => {
-            setWebgpuSupported(false);
-          });
-        }
-      } catch {
-        setWebgpuSupported(false);
-      }
-    };
-    checkWebGPU();
-  }, []);
-
   return (
     <>
-      <PerspectiveCamera makeDefault position={[0, 1.5, 4]} fov={50} />
+      <PerspectiveCamera makeDefault position={[0, 1.8, 4]} fov={45} />
       
       <OrbitControls
         enablePan={false}
@@ -168,25 +256,28 @@ function Scene() {
         maxPolarAngle={Math.PI / 1.5}
         autoRotate={true}
         autoRotateSpeed={0.5}
+        minDistance={2}
+        maxDistance={8}
       />
 
       {/* Lighting */}
-      <ambientLight intensity={0.4} />
+      <ambientLight intensity={0.5} />
       <directionalLight
         position={[5, 5, 5]}
-        intensity={1}
+        intensity={0.8}
         castShadow
         shadow-mapSize={[512, 512]}
       />
-      <pointLight position={[-5, 3, -5]} intensity={0.5} color="#667eea" />
-      <pointLight position={[5, 3, -5]} intensity={0.5} color="#764ba2" />
+      <pointLight position={[-5, 3, -5]} intensity={0.6} color="#667eea" />
+      <pointLight position={[5, 3, -5]} intensity={0.6} color="#764ba2" />
+      <pointLight position={[0, 4, 3]} intensity={0.4} color="#ffffff" />
 
       {/* Environment */}
       <Environment preset="city" />
 
       {/* Model */}
       <Suspense fallback={<Loader />}>
-        <VirtualModel />
+        <AsianFemaleModel />
       </Suspense>
 
       {/* Floor shadow */}
@@ -242,10 +333,10 @@ export default function ModelViewer({ currentOutfit }: ModelViewerProps) {
           <Scene />
         </Canvas>
 
-        {/* WebGPU Badge */}
+        {/* Model info badge */}
         <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 rounded-full glass-effect text-xs">
-          <span className="w-2 h-2 rounded-full bg-green-500" />
-          <span className="text-text-secondary">3D Ready</span>
+          <span className="w-2 h-2 rounded-full bg-pink-500" />
+          <span className="text-text-secondary">Asian Female Model</span>
         </div>
 
         {/* Instructions */}
