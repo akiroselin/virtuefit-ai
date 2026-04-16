@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getJob, setJob } from '@/lib/jobStore';
+import { textTo3D, getTaskStatus } from '@/lib/meshyApi';
 
+const USE_MESHY = process.env.USE_MESHY === 'true';
+const MESHY_API_KEY = process.env.MESHY_API_KEY;
 const COMFYUI_API_URL = process.env.COMFYUI_API_URL;
 const COMFYUI_API_KEY = process.env.COMFYUI_API_KEY;
 
@@ -23,8 +26,17 @@ export async function POST(request: NextRequest) {
       createdAt: new Date(),
     });
 
-    // 触发生成流程
-    processGeneration(jobId, { prompt, style, colors, modelType });
+    // 选择生成模式
+    if (USE_MESHY && MESHY_API_KEY) {
+      // Meshy.ai 模式 - 生成 3D 模型
+      processMeshyGeneration(jobId, { prompt, style });
+    } else if (COMFYUI_API_URL) {
+      // ComfyUI 模式
+      processComfyUIGeneration(jobId, { prompt, style, colors });
+    } else {
+      // 模拟生成（演示用）
+      simulateGeneration(jobId);
+    }
 
     return NextResponse.json({
       success: true,
@@ -40,23 +52,30 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// 生成处理
-async function processGeneration(
+// Meshy.ai 3D 模型生成
+async function processMeshyGeneration(
   jobId: string,
-  params: { prompt: string; style?: string; colors?: string[]; modelType?: string }
+  params: { prompt: string; style?: string }
 ) {
   try {
     setJob(jobId, { status: 'processing', createdAt: new Date() });
 
-    // 如果配置了 ComfyUI，使用真实 API
-    if (COMFYUI_API_URL) {
-      await generateWithComfyUI(jobId, params);
-    } else {
-      // 使用模拟生成（演示用）
-      await simulateGeneration(jobId, params);
+    // 开始 Meshy 任务
+    const result = await textTo3D({
+      prompt: params.prompt,
+      style: (params.style as any) || 'realistics',
+      negativePrompt: 'low quality, blurry, distorted, bad anatomy',
+    });
+
+    if (!result.success || !result.taskId) {
+      throw new Error(result.error || 'Meshy generation failed');
     }
+
+    // 轮询 Meshy 任务
+    await pollMeshyJob(jobId, result.taskId);
+
   } catch (error) {
-    console.error('Generation failed:', error);
+    console.error('Meshy generation failed:', error);
     setJob(jobId, {
       status: 'failed',
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -65,12 +84,53 @@ async function processGeneration(
   }
 }
 
+// 轮询 Meshy 任务
+async function pollMeshyJob(jobId: string, taskId: string) {
+  const maxAttempts = 60; // 60 * 10s = 10分钟超时
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    try {
+      const status = await getTaskStatus(taskId);
+
+      if (status.status === 'COMPLETED') {
+        setJob(jobId, {
+          status: 'completed',
+          images: status.previewImageUrls || [],
+          modelUrl: status.modelUrl,
+          createdAt: new Date(),
+        });
+        return;
+      }
+
+      if (status.status === 'FAILED') {
+        throw new Error(status.error || 'Meshy task failed');
+      }
+
+      // 每10秒轮询一次
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+      attempts++;
+    } catch (error) {
+      console.error('Polling error:', error);
+      attempts++;
+    }
+  }
+
+  setJob(jobId, {
+    status: 'failed',
+    error: 'Generation timeout',
+    createdAt: new Date(),
+  });
+}
+
 // ComfyUI 生成
-async function generateWithComfyUI(
+async function processComfyUIGeneration(
   jobId: string,
-  params: { prompt: string; style?: string; colors?: string[]; modelType?: string }
+  params: { prompt: string; style?: string; colors?: string[] }
 ) {
   try {
+    setJob(jobId, { status: 'processing', createdAt: new Date() });
+
     const response = await fetch(`${COMFYUI_API_URL}/api/prompt`, {
       method: 'POST',
       headers: {
@@ -99,8 +159,8 @@ async function generateWithComfyUI(
 }
 
 // 构建 ComfyUI prompt
-function buildComfyUIPrompt(params: { prompt: string; style?: string; colors?: string[]; modelType?: string }) {
-  const { prompt, colors } = params;
+function buildComfyUIPrompt(params: { prompt: string; style?: string; colors?: string[] }) {
+  const { prompt } = params;
   
   return {
     "3": {
@@ -186,10 +246,7 @@ function extractImages(outputs: any): string[] {
 }
 
 // 模拟生成（演示用）
-async function simulateGeneration(
-  jobId: string, 
-  params: { prompt: string; style?: string; colors?: string[] }
-) {
+async function simulateGeneration(jobId: string) {
   const delays = [2000, 3000, 2500, 4000, 2000];
   
   for (let i = 0; i < delays.length; i++) {
@@ -197,12 +254,10 @@ async function simulateGeneration(
     console.log(`Job ${jobId}: ${((i + 1) / delays.length) * 100}% complete`);
   }
 
-  // 使用 picsum 生成示例图片
   const seed = jobId.replace(/-/g, '');
   const mockImages = [
     `https://picsum.photos/seed/${seed}/512/512`,
     `https://picsum.photos/seed/${seed}a/512/512`,
-    `https://picsum.photos/seed/${seed}b/512/512`,
   ];
 
   setJob(jobId, {
