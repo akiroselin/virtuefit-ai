@@ -2,7 +2,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "framework": "nextjs",
-  "regions": ["hkg1", "sin1"],
+  "regions": ["iad1"],
   "env": {
     "COMFYUI_API_URL": "@comfyui-api-url",
     "COMFYUI_API_KEY": "@comfyui-api-key"
